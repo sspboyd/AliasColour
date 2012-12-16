@@ -1,0 +1,30 @@
+#################################
+# Java generated files          #
+#################################
+*.class
+*.java
+# Package Files #
+*.jar
+*.war
+*.ear
+
+
+#################################
+# OS generated files            #
+#################################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+#################################
+# Processing files              #
+# some specific to my workflow  #
+#################################
+sketch.properties
+build-tmp/
+out/
+srcFiles/
+*.jpg
+*.JPG
