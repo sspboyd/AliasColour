@@ -1,82 +1,156 @@
-// new boxes sketch
-/* 
- This sketch reads colours from a pixel array (PImage) and displays the most prevalent colour(s)
- in one or more boxes. I'm calling them boxes but they could be circles, triangles, whatever.
- Might be better to call them cells? Then I could have cells within cells?
- 
- */
-
 // Import Libraries
 // import processing.pdf.*;
 import toxi.color.*;
 import toxi.math.*;
 import java.util.List;
 
+PFont font;
+
 // Source Image
-PImage baseSrc;
-
-
+PImage arctyp;
+PImage media;
+PImage histArchetypeSrc;
+PImage histMedSrc;
+int max_bins;
 void setup() {
-  // load the source image from a file
-  // baseSrc = loadImage("P1060666-Cropped-smaller.jpg");
-  // baseSrc = loadImage("P1040862-small.jpg");
-  // baseSrc = loadImage("P1030205.JPG");
-  baseSrc = loadImage("image2.jpg");
-  // baseSrc = loadImage("P1090881.jpg");
-
-  // baseSrc = loadImage("F1000012.jpg");
-  // baseSrc = loadImage("P1030557.png");
-
-  // Size of the sketch is based on the size of the source image
-  // size(baseSrc.width, baseSrc.height); 
   size(1000,618);
-  //  size(800,800, PDF, "boxes.pdf"); // does this size matter if I'm drawing to a pdf? Only the w to h ratio matters?
   background(255); // sets background colour to white
-  //noLoop(); // no need to run the draw method
 
-  noStroke(); // don't want lines around the boxes
-makeNewHist();
+  // load the source image from a file
+  arctyp =  loadImage("F1000012.jpg");
+  media =   loadImage("P1060666-Cropped-smaller.jpg");
+
+  font = createFont("Helvetica", 10);  //requires a font file in the data folder
+  textFont(font);
+
+  // Notes
+  // for each?/every? image
+  // make freq histogram
+  // use colordist put into 0-256 'bins' based on brightness
+  // add up freqs of each color going into each bin
+
+  // idea: use different types of matching algorithms.
+  // - similarity of top colours
+  // - full spectrum match
+  // - spectrum biased matching
+
+
+// new image = archtyp, medium, PImage output, output w & h, layers, type of matching)
+
+// layers is another way of specifcying number of subdivisions
+
+
+// binNumber = map brightness value of a freq hist entry color, 
+// current range 0 , max dist between black and white blk.distanceToRGB(wht))
+// output range 0, 256 (bins)
+// float[] bins = new Array[256];
+// bins[binNumber]+= currHistEntry.getFrequency();
+// (or maybe need redBin, blueBin, greenbin to create color separated histograms)
+
+
+
+  // these are used when grabbing a subsection of the arctyp image in the loop below
+  int arctypGridW = 150; 
+  int arctypGridH = 150;
+  // these are used when grabbing a subsection of the medium image in the loop below
+  int medGridW = 150; 
+  int medGridH = 150;
+
+max_bins = 32; // probably not the right spot for this value. Should be passed in maybe?
+
+
+  // Grab random square from archetype image
+  PVector arctypTilePos = new PVector(int(random(width-arctypGridW)),int(random(height-arctypGridH))); 
+  
+  // Grab random square from medium image
+  PVector medTilePos = new PVector(int(random(width-medGridW)),int(random(height-medGridH))); 
+  
+  histArchetypeSrc = arctyp.get(int(arctypTilePos.x), int(arctypTilePos.y), arctypGridW, arctypGridH);
+  histMedSrc = media.get(int(medTilePos.x), int(medTilePos.y), medGridW, medGridH);
+  compareImgs(histArchetypeSrc, histMedSrc);
+  // makeNewHist(histArchetypeSrc);
 }
 
-void makeNewHist(){
-  background(255);
-  // these are used when grabbing a subsection of the baseSrc image in the loop below
-  int baseSrcGridW = 100; 
-  int baseSrcGridH = 100;
- PVector baseSrcPos = new PVector(int(random(width-baseSrcGridH)),int(random(height-baseSrcGridH))); 
- // PVector baseSrcPos = new PVector(width/2, height/2); 
+float[] histToBins(List<HistEntry> fhe){
+  float[] bins = new float[max_bins];
+  TColor blk = TColor.BLACK.copy(); // create black and white values as references
+  TColor wht = TColor.WHITE.copy();
+  float max_dist = blk.distanceToRGB(wht);
 
- PImage histArchetypeSrc = baseSrc.get(int(baseSrcPos.x), int(baseSrcPos.y), baseSrcGridW, baseSrcGridH);
+    for (HistEntry e : fhe){ // for each  HistEntry e in fhe
+      float d = blk.distanceToRGB(e.getColor());
+      // bin number equals distance from black / max distance * max bins
+      int binNum = int((d / max_dist) * max_bins);
+      bins[binNum] += e.getFrequency();
+    }
+    return bins;
+  }
+
+
+
+
+float getFit(float[] a, float[] m){
+  float score=0; // 0 is a perfect match
+  for (int i = 0; i<a.length; i++){
+score += abs(a[i]-m[i]);
+  }
+  return score;
+}
+
+  void compareImgs(PImage a, PImage m){
 
   // tolerance is defines how close colours in the src image have to be to be grouped as one colour 
-  float tolerance = 0.1;
+  float tolerance = 0.075;
 
   // create a color histogram of image, using only 50% of its pixels and the given tolerance
-  Histogram hist=Histogram.newFromARGBArray(histArchetypeSrc.pixels, histArchetypeSrc.pixels.length/2, tolerance, true);
-  List<HistEntry> f = hist.getEntries();
+  Histogram aFreqHist = Histogram.newFromARGBArray(a.pixels, a.pixels.length/2, tolerance, true);
+  Histogram mFreqHist = Histogram.newFromARGBArray(m.pixels, m.pixels.length/2, tolerance, true);
+
+  List<HistEntry> aFreqHistEnt = aFreqHist.getEntries();
+  List<HistEntry> mFreqHistEnt = mFreqHist.getEntries();
+
+  float[] aBin = histToBins(aFreqHistEnt);
+  float[] mBin = histToBins(mFreqHistEnt);
+
+  float fit = getFit(aBin, mBin);
+
   int counter = 0;
-  for (HistEntry he : f){
-    color currentClr = he.getColor().toARGB();
-    float currFreq = he.getFrequency();
 
-    // PVector clrSqr = new PVector(0,0);
-    if(counter < 30){
-    float clrSqrx = map(counter, 0, 30, 50, width-50);
-    float clrSqry = height-50;
-    float clrSqrH = map(currFreq, 0, 1, 0, -350);
-    
-    fill(currentClr);
-    
-    rect(clrSqrx, clrSqry, 20, clrSqrH);
+  //render section  
+  background(255);
+
+  image(a, 50, height/2 - 25 - 150);
+  fill(0);
+  textSize(14);
+  text("Fitness Score: " + nf(fit,1,3), 50, height/2);
+  image(m, 50, height/2 + 25);
+
+    float binW = 10;
+  for (int i = 0; i<aBin.length; i++){
+    // draw rect for frequency
+    float binH = map(aBin[i], 0, 2, 0, -500);
+    float binY = height/2 - 25;
+    float binX = map(i, 0, max_bins, 250, width-50);
+    noStroke();
+    // fill(color((1.0*i/max_bins)*255)); // create grey scale colour gradient
+    fill(0); 
+    rect(binX, binY, binW, binH);
+    textSize(10);
+    text(nf(aBin[i],1,2), binX, binY +18);
   }
-    counter++;
-    //println("HistEntry #" + counter + ": [" + red(currentClr) + ", " + green(currentClr) + ", " + blue(currentClr) + "], " + currFreq);
-    
+  for (int i = 0; i<mBin.length; i++){
+    // draw rect for frequency
+    //float binW = 18;
+    float binH = map(mBin[i], 0, 2, 0, 500);
+    float binY = height /2 +25;
+    float binX = map(i, 0, max_bins, 250, width-50);
+    noStroke();
+    // fill(color((1.0*i/max_bins)*255)); // create grey scale colour gradient
+    fill(0); // create grey scale colour gradient
+    rect(binX, binY, binW, binH);
+    textSize(10);
+    text(nf(mBin[i],1,2), binX, binY -15);
   }
-
-  image(histArchetypeSrc, 50,50);
-
-
 }
 
 void draw() {
@@ -160,6 +234,112 @@ class ColourCell {
   }
 }
 void keyPressed() {
-  if (key == 'n') makeNewHist();
+    if (key == 'S') screenCap();
+
+  if (key == 'n'){
+      // these are used when grabbing a subsection of the arctyp image in the loop below
+      int arctypGridW = 50; 
+      int arctypGridH = 50;
+
+      PVector arctypTilePos = new PVector(int(random(width-arctypGridH)),int(random(height-arctypGridH))); 
+  // PVector arctypTilePos = new PVector(width/2, height/2); 
+
+  histArchetypeSrc = arctyp.get(int(arctypTilePos.x), int(arctypTilePos.y), arctypGridW, arctypGridH);
+//compareImgs(arctyp, medium)
+makeNewHist(histArchetypeSrc);
+
 }
+
+if(key == 'c'){
+    // these are used when grabbing a subsection of the arctyp image in the loop below
+  int arctypGridW = 150; 
+  int arctypGridH = 150;
+  // these are used when grabbing a subsection of the medium image in the loop below
+  int medGridW = 150; 
+  int medGridH = 150;
+
+
+  // Grab random square from archetype image
+  PVector arctypTilePos = new PVector(int(random(arctyp.width-arctypGridW)),int(random(arctyp.height-arctypGridH))); 
+
+  // Grab random square from medium image
+  PVector medTilePos = new PVector(int(random(media.width-medGridW)),int(random(media.height-medGridH))); 
+  
+  histArchetypeSrc = arctyp.get(int(arctypTilePos.x), int(arctypTilePos.y), arctypGridW, arctypGridH);
+  histMedSrc = media.get(int(medTilePos.x), int(medTilePos.y), medGridW, medGridH);
+  compareImgs(histArchetypeSrc, histMedSrc);
+
+}
+}
+
+void makeNewHist(PImage a){
+  background(255);
+
+
+  // tolerance is defines how close colours in the src image have to be to be grouped as one colour 
+  float tolerance = 0.075;
+
+  // create a color histogram of image, using only 50% of its pixels and the given tolerance
+  Histogram hist=Histogram.newFromARGBArray(a.pixels, a.pixels.length/2, tolerance, true);
+  List<HistEntry> f = hist.getEntries();
+  int counter = 0;
+  TColor blk = TColor.BLACK.copy();
+  for (HistEntry he : f){
+    color currentClr = he.getColor().toARGB();
+    float currFreq = he.getFrequency();
+
+    // PVector clrSqr = new PVector(0,0);
+    if(counter < 30){
+      float clrSqrx = map(counter, 0, 30, 50, width-50);
+      float clrSqry = height-75;
+      float clrSqrH = map(currFreq, 0, 1, 0, -325);
+      float d = blk.distanceToRGB(he.getColor());
+
+      fill(0);
+      text(d, clrSqrx, clrSqry+25);
+      fill(currentClr);
+
+
+      rect(clrSqrx, clrSqry, 20, clrSqrH);
+    }
+    counter++;
+    //println("HistEntry #" + counter + ": [" + red(currentClr) + ", " + green(currentClr) + ", " + blue(currentClr) + "], " + currFreq);
+    
+  }
+
+  image(a, 50,50);
+
+
+}
+
+void screenCap() {
+  // save functionality in here
+  String outputDir = "out/";
+  String sketchName = "aliasColoursTest-";
+  String dateTime = "" + year() + month() + day() + hour() + minute() + second();
+  String fileType = ".tif";
+  String fileName = outputDir + sketchName + dateTime + fileType;
+  save(fileName);
+  println("Screen shot taken and saved to " + fileName);
+}
+
+/* 
+Misc / Slush 
+  TColor blk = TColor.BLACK.copy();
+  TColor wht = TColor.WHITE.copy();
+  TColor rd = TColor.RED.copy();
+  TColor bl = TColor.BLUE.copy();
+  TColor gr = TColor.GREEN.copy();
+
+  println("dist between black and white: " + blk.distanceToRGB(wht));
+  println("dist between black --> red: " + blk.distanceToRGB(rd));
+  println("dist between white --> red: " + wht.distanceToRGB(rd));
+  println("dist between black --> blue: " + blk.distanceToRGB(bl));
+  println("dist between white --> blue: " + wht.distanceToRGB(bl));
+  println("dist between black --> green: " + blk.distanceToRGB(gr));
+  println("dist between red --> green: " + rd.distanceToRGB(gr));
+
+
+  */
+
 
