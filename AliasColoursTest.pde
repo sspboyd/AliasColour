@@ -12,6 +12,9 @@ PImage media;
 PImage histArchetypeSrc;
 PImage histMedSrc;
 int max_bins;
+float maxScore;
+float minScore;
+
 void setup() {
   size(1000,618);
   background(255); // sets background colour to white
@@ -22,6 +25,9 @@ void setup() {
 
   font = createFont("Helvetica", 10);  //requires a font file in the data folder
   textFont(font);
+
+  maxScore = MIN_FLOAT;
+  minScore = MAX_FLOAT;
 
   // Notes
   // for each?/every? image
@@ -56,15 +62,15 @@ void setup() {
   int medGridW = 150; 
   int medGridH = 150;
 
-max_bins = 32; // probably not the right spot for this value. Should be passed in maybe?
+  max_bins = 32; // probably not the right spot for this value. Should be passed in maybe?
 
 
-  // Grab random square from archetype image
-  PVector arctypTilePos = new PVector(int(random(width-arctypGridW)),int(random(height-arctypGridH))); 
-  
+    // Grab random square from archetype image
+  PVector arctypTilePos = new PVector(int(random(arctyp.width-arctypGridW)),int(random(arctyp.height-arctypGridH))); 
+
   // Grab random square from medium image
-  PVector medTilePos = new PVector(int(random(width-medGridW)),int(random(height-medGridH))); 
-  
+  PVector medTilePos = new PVector(int(random(media.width-medGridW)),int(random(media.height-medGridH))); 
+
   histArchetypeSrc = arctyp.get(int(arctypTilePos.x), int(arctypTilePos.y), arctypGridW, arctypGridH);
   histMedSrc = media.get(int(medTilePos.x), int(medTilePos.y), medGridW, medGridH);
   compareImgs(histArchetypeSrc, histMedSrc);
@@ -89,15 +95,36 @@ float[] histToBins(List<HistEntry> fhe){
 
 
 
-float getFit(float[] a, float[] m){
+  float getFit(float[] a, float[] m){
   float score=0; // 0 is a perfect match
   for (int i = 0; i<a.length; i++){
-score += abs(a[i]-m[i]);
+    score += abs(a[i]-m[i]);
   }
   return score;
 }
 
-  void compareImgs(PImage a, PImage m){
+void compareImgs(PImage a, PImage m){
+// for each tile in a layer...
+// get colour list of the archetype and media
+// use ColorList.createFromARGBArray(int[] pixels, int pixels.length, boolean false)
+// get average colour of the two image's colours
+// get brightness of the average colour from both images
+// get hue of the average colour from both images
+// get hue delta between two colours
+// get brightness delta between two brightnesses
+// apply weighting to hue delta based on current layer/resolution
+// apply weighting to brightness delta based on current layer/resolution
+// add em up and get the fitness score
+// if the fitness score is higher than a certain threshold, 
+//    use 'media' tile to recreate 'archetype' image in new 'painting'
+
+
+
+
+
+
+
+
 
   // tolerance is defines how close colours in the src image have to be to be grouped as one colour 
   float tolerance = 0.075;
@@ -113,6 +140,14 @@ score += abs(a[i]-m[i]);
   float[] mBin = histToBins(mFreqHistEnt);
 
   float fit = getFit(aBin, mBin);
+  String strFit = nf(fit,1,1);
+
+  if(fit>maxScore){
+    maxScore = fit;
+  }
+  if(fit<minScore){
+    minScore = fit;
+  }
 
   int counter = 0;
 
@@ -122,18 +157,30 @@ score += abs(a[i]-m[i]);
   image(a, 50, height/2 - 25 - 150);
   fill(0);
   textSize(14);
-  text("Fitness Score: " + nf(fit,1,3), 50, height/2);
+  stroke(0);
+  line(50, height-75, width-50, height-75);
+  PVector scoreMarker = new PVector(0,0);
+  scoreMarker.x = map(fit, minScore, maxScore, 50, width-50);
+  scoreMarker.y = height-75-5;
+  rect(scoreMarker.x, scoreMarker.y, 3, 10);
+  text(nf(minScore,1,1), 50, scoreMarker.y-25);
+  text(nf(maxScore,1,1), width-50, scoreMarker.y-25);
+  text(strFit, scoreMarker.x, scoreMarker.y-25);
+
+  text("Fitness Score: " + strFit, 50, height/2);
+
   image(m, 50, height/2 + 25);
 
-    float binW = 10;
+  float binW = 10;
   for (int i = 0; i<aBin.length; i++){
     // draw rect for frequency
     float binH = map(aBin[i], 0, 2, 0, -500);
     float binY = height/2 - 25;
     float binX = map(i, 0, max_bins, 250, width-50);
-    noStroke();
-    // fill(color((1.0*i/max_bins)*255)); // create grey scale colour gradient
-    fill(0); 
+    stroke(126);
+    strokeWeight(0.5);
+    fill(color((1.0*i/max_bins)*255)); // create grey scale colour gradient
+    //fill(0); 
     rect(binX, binY, binW, binH);
     textSize(10);
     text(nf(aBin[i],1,2), binX, binY +18);
@@ -234,7 +281,7 @@ class ColourCell {
   }
 }
 void keyPressed() {
-    if (key == 'S') screenCap();
+  if (key == 'S') screenCap();
 
   if (key == 'n'){
       // these are used when grabbing a subsection of the arctyp image in the loop below
@@ -252,8 +299,8 @@ makeNewHist(histArchetypeSrc);
 
 if(key == 'c'){
     // these are used when grabbing a subsection of the arctyp image in the loop below
-  int arctypGridW = 150; 
-  int arctypGridH = 150;
+    int arctypGridW = 150; 
+    int arctypGridH = 150;
   // these are used when grabbing a subsection of the medium image in the loop below
   int medGridW = 150; 
   int medGridH = 150;
