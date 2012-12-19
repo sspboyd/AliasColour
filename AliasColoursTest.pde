@@ -24,7 +24,7 @@ int medGridH = 150;
 
 void setup() {
   size(1000,618);
-  background(255); // sets background colour to white
+  
 
   // load the source image from a file
   arctyp =  loadImage("F1000012.jpg");
@@ -33,8 +33,10 @@ void setup() {
   font = createFont("Helvetica", 10);  //requires a font file in the data folder
   textFont(font);
 
-  maxScore = MIN_FLOAT;
-  minScore = MAX_FLOAT;
+  maxScore = 2;
+  minScore = 0;
+  // maxScore = MIN_FLOAT;
+  // minScore = MAX_FLOAT;
   max_bins = 24; // probably not the right spot for this value. Should be passed in maybe?
 
 
@@ -68,7 +70,7 @@ void compareImgs(PImage a, PImage m){
   // if the fitness score is higher than a certain threshold, 
   //    use 'media' tile to recreate 'archetype' image in new 'painting'
 
-
+  // Image Comparison
   // tolerance defines how close colours in the src image have to be to be grouped as one colour 
   float tolerance = 0.025;
 
@@ -85,14 +87,8 @@ void compareImgs(PImage a, PImage m){
   float fit = getFit(aBin, mBin);
   String strFit = nf(fit,1,2);
 
-  if(fit>maxScore){
-    maxScore = fit;
-  }
-  if(fit<minScore){
-    minScore = fit;
-  }
-
-  int counter = 0;
+  if(fit>maxScore) maxScore = fit;
+  if(fit<minScore) minScore = fit;
 
   //render section  
   background(255);
@@ -111,8 +107,8 @@ void compareImgs(PImage a, PImage m){
   text(nf(minScore,1,2), 50, scoreMarker.y-5);
   text(nf(maxScore,1,2), width-50-textWidth("1.0"), scoreMarker.y-5);
   text(strFit, scoreMarker.x-textWidth(strFit)/2, scoreMarker.y-25);
-
-  text("Fitness Score: " + strFit, 50, height/2);
+    text("same", 50, height-50);
+  text("different", width-50-textWidth("different"), height-50);
 
   // too much duplicate code below
   float binW = 20;
@@ -172,10 +168,8 @@ void keyPressed() {
   if (key == 'S') screenCap();
 
   if(key == 'c'){
-    // Grab random square from archetype image
+    // Grab random square from archetype image then media image(s)
     PVector arctypTilePos = new PVector(int(random(arctyp.width-arctypGridW)),int(random(arctyp.height-arctypGridH))); 
-
-    // Grab random square from medium image
     PVector medTilePos = new PVector(int(random(media.width-medGridW)),int(random(media.height-medGridH))); 
     
     histArchetypeSrc = arctyp.get(int(arctypTilePos.x), int(arctypTilePos.y), arctypGridW, arctypGridH);
@@ -195,31 +189,3 @@ void screenCap() {
   save(fileName);
   println("Screen shot taken and saved to " + fileName);
 }
-
-
-// Misc Notes
-// Notes
-// for each?/every? image
-// make freq histogram
-// use colordist put into 0-256 'bins' based on brightness
-// add up freqs of each color going into each bin
-
-// idea: use different types of matching algorithms.
-// - similarity of top colours
-// - full spectrum match
-// - spectrum biased matching
-
-
-// new image = archtyp, medium, PImage output, output w & h, layers, type of matching)
-
-// layers is another way of specifcying number of subdivisions
-
-
-// binNumber = map brightness value of a freq hist entry color, 
-// current range 0 , max dist between black and white blk.distanceToRGB(wht))
-// output range 0, 256 (bins)
-// float[] bins = new Array[256];
-// bins[binNumber]+= currHistEntry.getFrequency();
-// (or maybe need redBin, blueBin, greenbin to create color separated histograms)
-
-
